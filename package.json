@@ -1,0 +1,30 @@
+{
+  "name": "silttrap",
+  "version": "0.0.0",
+  "description": "Replay one browser sluice for many tides and fail when silt readings keep climbing.",
+  "license": "MIT",
+  "author": "Irfan Sencer Senyurt",
+  "type": "module",
+  "bin": {
+    "silttrap": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sncrsenyurt/silttrap.git"
+  },
+  "dependencies": {
+    "playwright": "^1.64.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}
