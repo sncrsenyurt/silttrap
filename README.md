@@ -6,16 +6,34 @@ I call the flow file a sluice. One replay of it is a tide. The numbers taken aft
 
 ## what works today
 
-Basically nothing. There is a package skeleton, a TypeScript config, one placeholder sluice, and a CLI entry that only prints that it is not wired up yet. Playwright is declared as a dependency and is not called. There is no sampling, no pass or fail rule, and no report.
+Loading a sluice. `readSluice` reads one JSON file from disk and returns a typed object, or throws `SluiceFault` with a specific reason when the file is missing, not JSON, or the wrong shape. The sample flow is `sluices/note-desk.sluice.json`. The CLI still only prints that it is not wired up. Nothing opens a browser, nothing samples memory, and nothing writes a report.
+
+## sluice file
+
+A sluice is one JSON object.
+
+- `title` is a non-empty string, a name for the flow.
+- `bed` is an `http` or `https` URL. A tide starts there.
+- `tideCount` is an integer greater than zero, how many times to replay.
+- `gates` is an ordered list of steps. An empty list is allowed.
+
+Each gate has a `kind`.
+
+- `course` opens a page. `path` is an `http` or `https` URL, or a path that starts with `/`.
+- `nudge` clicks whatever `mark` matches. `mark` is a non-empty string.
+- `pour` types `text` into whatever `mark` matches. `text` is a string and may be empty.
+- `hold` waits `ms` milliseconds, a positive integer.
+
+Any other field is rejected. I am not joining a `/path` onto the bed yet. The loader only checks the shape.
 
 ## rough plan
 
-1. This scaffold.
-2. Settle the sluice file shape and load one from disk.
+1. Scaffold. Done.
+2. Settle the sluice file shape and load one from disk. Done for reading and validation.
 3. Launch one Playwright browser and walk the sluice a single time.
 4. Repeat that walk as tides without closing the browser.
 5. Take a silt reading over the DevTools protocol after forcing a collection.
 6. Fail the process when the readings show a climb that does not settle.
 7. Write the HTML report into `settling/`.
 
-I have not decided the climb rule, or the exact words for the steps inside a sluice. The file under `sluices/` is only the shape I am leaning toward: a starting page (the bed), how many tides to run, and an ordered list of gates.
+I have not decided the climb rule. Joining a course path onto the bed is still open.

@@ -1,0 +1,33 @@
+{
+  "title": "note desk",
+  "bed": "https://notes.example/desk",
+  "tideCount": 6,
+  "gates": [
+    {
+      "kind": "pour",
+      "mark": "input[name=filter]",
+      "text": "tide"
+    },
+    {
+      "kind": "nudge",
+      "mark": "a.note-row"
+    },
+    {
+      "kind": "course",
+      "path": "/notes/draft"
+    },
+    {
+      "kind": "pour",
+      "mark": "textarea[name=body]",
+      "text": "kept from the last tide"
+    },
+    {
+      "kind": "nudge",
+      "mark": "button.save"
+    },
+    {
+      "kind": "hold",
+      "ms": 300
+    }
+  ]
+}
