@@ -6,7 +6,11 @@ I call the flow file a sluice. One replay of it is a tide. The numbers taken aft
 
 ## what works today
 
-Loading a sluice. `readSluice` reads one JSON file from disk and returns a typed object, or throws `SluiceFault` with a specific reason when the file is missing, not JSON, or the wrong shape. The sample flow is `sluices/note-desk.sluice.json`. The CLI still only prints that it is not wired up. Nothing opens a browser, nothing samples memory, and nothing writes a report.
+Loading a sluice. `readSluice` reads one JSON file from disk and returns a typed object, or throws `SluiceFault` with a specific reason when the file is missing, not JSON, or the wrong shape. The sample flow is `sluices/note-desk.sluice.json`.
+
+Running tides. `silttrap run sluices/note-desk.sluice.json` loads that file and opens one headless Chromium, one context, and one page. A tide starts at `bed`, then walks `gates` in order. The next tide reuses that same page. The count is the sluice `tideCount`. `--tides N` overrides it. I print one line after each tide, the tide number and the elapsed milliseconds: `tide 1 84ms`. The browser closes when the run finishes, and it also closes when a gate throws.
+
+I am not joining a course path that starts with `/` onto the bed yet. Reaching one throws `TideFault`. The note desk sample has `/notes/draft`, and its bed is only an example URL, so that file does not finish a tide. Nothing samples memory, and nothing writes a report.
 
 ## sluice file
 
@@ -30,8 +34,8 @@ Any other field is rejected. I am not joining a `/path` onto the bed yet. The lo
 
 1. Scaffold. Done.
 2. Settle the sluice file shape and load one from disk. Done for reading and validation.
-3. Launch one Playwright browser and walk the sluice a single time.
-4. Repeat that walk as tides without closing the browser.
+3. Launch one Playwright browser and walk the sluice a single time. Done.
+4. Repeat that walk as tides without closing the browser. Done.
 5. Take a silt reading over the DevTools protocol after forcing a collection.
 6. Fail the process when the readings show a climb that does not settle.
 7. Write the HTML report into `settling/`.
