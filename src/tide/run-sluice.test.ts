@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { type Page } from "playwright";
 
+import { formatReading } from "../silt/reading.js";
 import { type Sluice } from "../sluice/shape.js";
 import { runSluice, TideFault } from "./run-sluice.js";
 
@@ -72,7 +73,20 @@ describe("runSluice", () => {
     expect(lines).toHaveLength(2);
     expect(lines.map((line) => line.tide)).toEqual([1, 2]);
     expect(lines.every((line) => Number.isInteger(line.elapsedMs) && line.elapsedMs >= 0)).toBe(true);
-    expect(logged).toEqual(lines.map((line) => `tide ${line.tide} ${line.elapsedMs}ms`));
+    expect(
+      lines.every(
+        (line) =>
+          Number.isInteger(line.reading.heapUsed) &&
+          line.reading.heapUsed > 0 &&
+          Number.isInteger(line.reading.domNodes) &&
+          line.reading.domNodes > 0 &&
+          Number.isInteger(line.reading.listeners) &&
+          line.reading.listeners >= 0,
+      ),
+    ).toBe(true);
+    expect(logged).toEqual(
+      lines.map((line) => `tide ${line.tide} ${line.elapsedMs}ms ${formatReading(line.reading)}`),
+    );
   });
 
   it("follows an absolute course for the sluice tide count", async () => {

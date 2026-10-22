@@ -1,5 +1,7 @@
 import { chromium, type Page } from "playwright";
 
+import { takeReading, type Gauge } from "../silt/gauge.js";
+import { formatReading, type SiltReading } from "../silt/reading.js";
 import { type CourseGate, type Gate, type Sluice } from "../sluice/shape.js";
 
 export class TideFault extends Error {
@@ -9,10 +11,11 @@ export class TideFault extends Error {
   }
 }
 
-/** One finished tide: its number, and how long the walk took. */
+/** One finished tide: its number, how long the walk took, and the silt reading after it. */
 export type TideLine = {
   tide: number;
   elapsedMs: number;
+  reading: SiltReading;
 };
 
 export type RunSluiceOptions = {
@@ -30,16 +33,23 @@ export async function runSluice(sluice: Sluice, options: RunSluiceOptions = {}):
 
   const write = options.write ?? ((line: string) => console.log(line));
   const lines: TideLine[] = [];
+  // Silt readings use Chrome's DevTools protocol, so this stays on Chromium.
   const browser = await chromium.launch();
   try {
     const context = await browser.newContext();
     const page = await context.newPage();
+    const session = await context.newCDPSession(page);
+    const gauge: Gauge = {
+      send: (method) => session.send(method),
+    };
     for (let tide = 1; tide <= tideCount; tide += 1) {
       const started = performance.now();
       await walkTide(page, sluice);
-      const line: TideLine = { tide, elapsedMs: Math.round(performance.now() - started) };
+      const elapsedMs = Math.round(performance.now() - started);
+      const reading = await takeReading(gauge);
+      const line: TideLine = { tide, elapsedMs, reading };
       lines.push(line);
-      write(`tide ${line.tide} ${line.elapsedMs}ms`);
+      write(`tide ${line.tide} ${line.elapsedMs}ms ${formatReading(line.reading)}`);
       if (options.afterTide) {
         await options.afterTide(page, line);
       }

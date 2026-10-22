@@ -8,9 +8,11 @@ I call the flow file a sluice. One replay of it is a tide. The numbers taken aft
 
 Loading a sluice. `readSluice` reads one JSON file from disk and returns a typed object, or throws `SluiceFault` with a specific reason when the file is missing, not JSON, or the wrong shape. The sample flow is `sluices/note-desk.sluice.json`.
 
-Running tides. `silttrap run sluices/note-desk.sluice.json` loads that file and opens one headless Chromium, one context, and one page. A tide starts at `bed`, then walks `gates` in order. The next tide reuses that same page. The count is the sluice `tideCount`. `--tides N` overrides it. I print one line after each tide, the tide number and the elapsed milliseconds: `tide 1 84ms`. The browser closes when the run finishes, and it also closes when a gate throws.
+Running tides. `silttrap run sluices/note-desk.sluice.json` loads that file and opens one headless Chromium, one context, and one page. A tide starts at `bed`, then walks `gates` in order. The next tide reuses that same page. The count is the sluice `tideCount`. `--tides N` overrides it. After the gates, I take a silt reading on that page and print one line: `tide 1 84ms heap 1835008 nodes 42 listeners 3`. The browser closes when the run finishes, and it also closes when a gate throws.
 
-I am not joining a course path that starts with `/` onto the bed yet. Reaching one throws `TideFault`. The note desk sample has `/notes/draft`, and its bed is only an example URL, so that file does not finish a tide. Nothing samples memory, and nothing writes a report.
+The reading comes from one Chrome DevTools session on that page. I call `HeapProfiler.collectGarbage` twice, so the numbers are what is still retained, then `Runtime.getHeapUsage` for JS heap used (`usedSize`) and `Memory.getDOMCounters` for the DOM node count (`nodes`) and the event listener count (`jsEventListeners`). This is Chromium only. I do not launch Firefox or WebKit, because those three numbers are Chrome protocol fields. A climb in the numbers does not fail the run yet. There is no verdict.
+
+I am not joining a course path that starts with `/` onto the bed yet. Reaching one throws `TideFault`. The note desk sample has `/notes/draft`, and its bed is only an example URL, so that file does not finish a tide and does not print a reading. Nothing writes a report.
 
 ## sluice file
 
@@ -36,7 +38,7 @@ Any other field is rejected. I am not joining a `/path` onto the bed yet. The lo
 2. Settle the sluice file shape and load one from disk. Done for reading and validation.
 3. Launch one Playwright browser and walk the sluice a single time. Done.
 4. Repeat that walk as tides without closing the browser. Done.
-5. Take a silt reading over the DevTools protocol after forcing a collection.
+5. Take a silt reading over the DevTools protocol after forcing a collection. Done. No verdict on whether the numbers climb.
 6. Fail the process when the readings show a climb that does not settle.
 7. Write the HTML report into `settling/`.
 
