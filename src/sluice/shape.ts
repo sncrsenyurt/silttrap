@@ -36,6 +36,10 @@ export type Sluice = {
   bed: string;
   tideCount: number;
   gates: Gate[];
+  /** Tides ignored before the verdict. Omitted means the caller uses its default. */
+  wash?: number;
+  /** Allowed fractional growth from the first counted reading to the last. */
+  rise?: number;
 };
 
 export function isGateKind(value: string): value is GateKind {

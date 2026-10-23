@@ -19,6 +19,11 @@ describe("parseArgs", () => {
       filePath: "sluices/note-desk.sluice.json",
       tideCount: 8,
     });
+    expect(parseArgs(["run", "--wash", "0", "--rise=0.25", "sluices/note-desk.sluice.json"])).toEqual({
+      filePath: "sluices/note-desk.sluice.json",
+      wash: 0,
+      rise: 0.25,
+    });
   });
 
   it("rejects a command that is not run", () => {
@@ -36,6 +41,17 @@ describe("parseArgs", () => {
     expectUsage(["run", "a.json", "--tides=no"], '--tides must be a positive integer, got "no"');
     expectUsage(["run", "a.json", "--tides", "2", "--tides", "3"], "--tides was given twice");
   });
+
+  it("rejects a wash or rise that is not usable", () => {
+    expectUsage(["run", "a.json", "--wash"], "--wash needs a non-negative integer");
+    expectUsage(["run", "a.json", "--wash", "-1"], '--wash must be a non-negative integer, got "-1"');
+    expectUsage(["run", "a.json", "--wash=1.5"], '--wash must be a non-negative integer, got "1.5"');
+    expectUsage(["run", "a.json", "--wash", "1", "--wash", "2"], "--wash was given twice");
+    expectUsage(["run", "a.json", "--rise"], "--rise needs a non-negative number");
+    expectUsage(["run", "a.json", "--rise", "no"], '--rise must be a non-negative number, got "no"');
+    expectUsage(["run", "a.json", "--rise=-0.1"], '--rise must be a non-negative number, got "-0.1"');
+    expectUsage(["run", "a.json", "--rise", "0.1", "--rise", "0.2"], "--rise was given twice");
+  });
 });
 
 function expectUsage(argv: string[], detail: string): void {
@@ -47,6 +63,6 @@ function expectUsage(argv: string[], detail: string): void {
   }
   expect(caught).toBeInstanceOf(UsageFault);
   expect((caught as UsageFault).message).toBe(
-    `${detail}\nusage: silttrap run <sluice> [--tides N]`,
+    `${detail}\nusage: silttrap run <sluice> [--tides N] [--wash N] [--rise R]`,
   );
 }

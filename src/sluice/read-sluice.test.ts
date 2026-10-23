@@ -82,6 +82,21 @@ describe("readSluice", () => {
     expectFault(filePath, "sluice must be a JSON object, got an array");
   });
 
+  it("reads an optional wash and rise", () => {
+    const filePath = put("ruled.sluice.json", { ...validBody(), wash: 0, rise: 0.25 });
+    const sluice = readSluice(filePath);
+    expect(sluice.wash).toBe(0);
+    expect(sluice.rise).toBe(0.25);
+  });
+
+  it("rejects a wash or rise that is the wrong shape", () => {
+    const wash = put("bad-wash.sluice.json", { ...validBody(), wash: -1 });
+    expectFault(wash, "wash must be a non-negative integer, got -1");
+
+    const rise = put("bad-rise.sluice.json", { ...validBody(), rise: "fast" });
+    expectFault(rise, 'rise must be a non-negative number, got "fast"');
+  });
+
   it("rejects an unknown top-level field", () => {
     const filePath = put("extra.sluice.json", { ...validBody(), pace: "fast" });
     expectFault(filePath, 'unknown field "pace"');

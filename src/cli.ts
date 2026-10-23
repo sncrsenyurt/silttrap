@@ -4,13 +4,31 @@ import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 import { parseArgs } from "./parse-args.js";
+import { formatVerdict, isSettled, judge, DEFAULT_RISE, DEFAULT_WASH, type RunVerdict } from "./silt/verdict.js";
 import { readSluice } from "./sluice/read-sluice.js";
 import { runSluice, type TideLine } from "./tide/run-sluice.js";
 
-export async function silttrap(argv: string[], run: typeof runSluice = runSluice): Promise<TideLine[]> {
+export type SilttrapRun = {
+  lines: TideLine[];
+  verdict: RunVerdict;
+};
+
+export async function silttrap(
+  argv: string[],
+  run: typeof runSluice = runSluice,
+  write: (line: string) => void = (line) => console.log(line),
+): Promise<SilttrapRun> {
   const args = parseArgs(argv);
   const sluice = readSluice(args.filePath);
-  return run(sluice, { tideCount: args.tideCount });
+  const lines = await run(sluice, { tideCount: args.tideCount });
+  const verdict = judge(lines.map((line) => line.reading), {
+    wash: args.wash ?? sluice.wash ?? DEFAULT_WASH,
+    rise: args.rise ?? sluice.rise ?? DEFAULT_RISE,
+  });
+  for (const line of formatVerdict(verdict)) {
+    write(line);
+  }
+  return { lines, verdict };
 }
 
 function invokedDirectly(): boolean {
@@ -26,8 +44,14 @@ function invokedDirectly(): boolean {
 }
 
 if (invokedDirectly()) {
-  void silttrap(process.argv.slice(2)).catch((err: unknown) => {
-    console.error(err instanceof Error ? err.message : String(err));
-    process.exitCode = 1;
-  });
+  void silttrap(process.argv.slice(2))
+    .then((result) => {
+      if (!isSettled(result.verdict)) {
+        process.exitCode = 1;
+      }
+    })
+    .catch((err: unknown) => {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exitCode = 1;
+    });
 }

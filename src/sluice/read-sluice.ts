@@ -12,7 +12,7 @@ import {
   type Sluice,
 } from "./shape.js";
 
-const SLUICE_FIELDS = new Set(["title", "bed", "tideCount", "gates"]);
+const SLUICE_FIELDS = new Set(["title", "bed", "tideCount", "gates", "wash", "rise"]);
 
 const GATE_FIELDS: Record<GateKind, ReadonlySet<string>> = {
   course: new Set(["kind", "path"]),
@@ -60,12 +60,21 @@ export function readSluice(filePath: string): Sluice {
     throw new SluiceFault(filePath, `unknown ${fieldWord(extra)} ${quotedList(extra)}`);
   }
 
-  return {
+  const sluice: Sluice = {
     title: readTitle(filePath, parsed),
     bed: readBed(filePath, parsed),
     tideCount: readTideCount(filePath, parsed),
     gates: readGates(filePath, parsed),
   };
+  const wash = readWash(filePath, parsed);
+  if (wash !== undefined) {
+    sluice.wash = wash;
+  }
+  const rise = readRise(filePath, parsed);
+  if (rise !== undefined) {
+    sluice.rise = rise;
+  }
+  return sluice;
 }
 
 function readTitle(filePath: string, obj: Record<string, unknown>): string {
@@ -102,6 +111,28 @@ function readTideCount(filePath: string, obj: Record<string, unknown>): number {
     );
   }
   return tideCount;
+}
+
+function readWash(filePath: string, obj: Record<string, unknown>): number | undefined {
+  if (!("wash" in obj)) {
+    return undefined;
+  }
+  const wash = obj.wash;
+  if (typeof wash !== "number" || !Number.isInteger(wash) || wash < 0) {
+    throw new SluiceFault(filePath, `wash must be a non-negative integer, got ${shown(wash)}`);
+  }
+  return wash;
+}
+
+function readRise(filePath: string, obj: Record<string, unknown>): number | undefined {
+  if (!("rise" in obj)) {
+    return undefined;
+  }
+  const rise = obj.rise;
+  if (typeof rise !== "number" || !Number.isFinite(rise) || rise < 0) {
+    throw new SluiceFault(filePath, `rise must be a non-negative number, got ${shown(rise)}`);
+  }
+  return rise;
 }
 
 function readGates(filePath: string, obj: Record<string, unknown>): Gate[] {

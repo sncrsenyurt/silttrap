@@ -10,7 +10,9 @@ Loading a sluice. `readSluice` reads one JSON file from disk and returns a typed
 
 Running tides. `silttrap run sluices/note-desk.sluice.json` loads that file and opens one headless Chromium, one context, and one page. A tide starts at `bed`, then walks `gates` in order. The next tide reuses that same page. The count is the sluice `tideCount`. `--tides N` overrides it. After the gates, I take a silt reading on that page and print one line: `tide 1 84ms heap 1835008 nodes 42 listeners 3`. The browser closes when the run finishes, and it also closes when a gate throws.
 
-The reading comes from one Chrome DevTools session on that page. I call `HeapProfiler.collectGarbage` twice, so the numbers are what is still retained, then `Runtime.getHeapUsage` for JS heap used (`usedSize`) and `Memory.getDOMCounters` for the DOM node count (`nodes`) and the event listener count (`jsEventListeners`). This is Chromium only. I do not launch Firefox or WebKit, because those three numbers are Chrome protocol fields. A climb in the numbers does not fail the run yet. There is no verdict.
+The reading comes from one Chrome DevTools session on that page. I call `HeapProfiler.collectGarbage` twice, so the numbers are what is still retained, then `Runtime.getHeapUsage` for JS heap used (`usedSize`) and `Memory.getDOMCounters` for the DOM node count (`nodes`) and the event listener count (`jsEventListeners`). This is Chromium only. I do not launch Firefox or WebKit, because those three numbers are Chrome protocol fields.
+
+After the tides I judge each metric and print a line: `heap settled 1000 to 1040`, `nodes climbing 40 to 80`, or `listeners short`. I ignore the first `wash` tides (default 1). `rise` (default 0.1) is the fraction the last counted reading may sit above the first. Over that, the metric is climbing. Fewer than two counted readings is short. A spike in the middle does not count; I only compare the ends. The process exits 1 unless every metric is settled. `--wash` and `--rise` override the same fields on the sluice.
 
 I am not joining a course path that starts with `/` onto the bed yet. Reaching one throws `TideFault`. The note desk sample has `/notes/draft`, and its bed is only an example URL, so that file does not finish a tide and does not print a reading. Nothing writes a report.
 
@@ -22,6 +24,8 @@ A sluice is one JSON object.
 - `bed` is an `http` or `https` URL. A tide starts there.
 - `tideCount` is an integer greater than zero, how many times to replay.
 - `gates` is an ordered list of steps. An empty list is allowed.
+- `wash` is optional, an integer of zero or more. The first that many tides are left out of the verdict. Default 1.
+- `rise` is optional, a number of zero or more. Allowed growth as a fraction of the first counted reading. Default 0.1.
 
 Each gate has a `kind`.
 
@@ -38,8 +42,8 @@ Any other field is rejected. I am not joining a `/path` onto the bed yet. The lo
 2. Settle the sluice file shape and load one from disk. Done for reading and validation.
 3. Launch one Playwright browser and walk the sluice a single time. Done.
 4. Repeat that walk as tides without closing the browser. Done.
-5. Take a silt reading over the DevTools protocol after forcing a collection. Done. No verdict on whether the numbers climb.
-6. Fail the process when the readings show a climb that does not settle.
+5. Take a silt reading over the DevTools protocol after forcing a collection. Done.
+6. Fail the process when the readings show a climb that does not settle. Done. The rule is `wash` and `rise`, above.
 7. Write the HTML report into `settling/`.
 
-I have not decided the climb rule. Joining a course path onto the bed is still open.
+Joining a course path onto the bed is still open. The report is still unwritten.
