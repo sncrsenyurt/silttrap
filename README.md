@@ -2,7 +2,7 @@
 
 Work in progress. I am writing a small TypeScript command line tool that opens one browser, replays the same short flow many times inside that single session, and exits with a failure if memory keeps rising.
 
-I call the flow file a sluice. One replay of it is a tide. The numbers taken after a tide are a silt reading: JS heap used, DOM node count, and event listener count. Those are meant to come from the Chrome DevTools protocol, with a forced garbage collection before each reading, so leftover trash is not mistaken for a live leak. If the readings keep climbing, the run fails. Later, the same run should write a self-contained HTML file with an inline SVG chart and no extra assets.
+I call the flow file a sluice. One replay of it is a tide. The numbers taken after a tide are a silt reading: JS heap used, DOM node count, and event listener count. Those come from the Chrome DevTools protocol, with a forced garbage collection before each reading, so leftover trash is not mistaken for a live leak. If the readings keep climbing, the run fails. The same run writes one self-contained HTML file, a sheet, with inline SVG charts and no extra assets.
 
 ## what works today
 
@@ -14,7 +14,9 @@ The reading comes from one Chrome DevTools session on that page. I call `HeapPro
 
 After the tides I judge each metric and print a line: `heap settled 1000 to 1040`, `nodes climbing 40 to 80`, or `listeners short`. I ignore the first `wash` tides (default 1). `rise` (default 0.1) is the fraction the last counted reading may sit above the first. Over that, the metric is climbing. Fewer than two counted readings is short. A spike in the middle does not count; I only compare the ends. The process exits 1 unless every metric is settled. `--wash` and `--rise` override the same fields on the sluice.
 
-I am not joining a course path that starts with `/` onto the bed yet. Reaching one throws `TideFault`. The note desk sample has `/notes/draft`, and its bed is only an example URL, so that file does not finish a tide and does not print a reading. Nothing writes a report.
+Then I write a sheet. The default path is `settling/sheet.html`. `--sheet PATH` picks another file. The page is one HTML file: inline CSS, three small SVG line charts (heap, nodes, listeners, each on its own scale), the verdict with the from and to numbers, the sluice title, how many tides ran, and a table of the raw readings. No scripts, no fonts, no outside files. Text from the sluice is escaped. I still write the sheet when the verdict is climbing. The page is plain. I have not polished it.
+
+I am not joining a course path that starts with `/` onto the bed yet. Reaching one throws `TideFault`. The note desk sample has `/notes/draft`, and its bed is only an example URL, so that file does not finish a tide, does not print a reading, and does not write a sheet.
 
 ## sluice file
 
@@ -44,6 +46,6 @@ Any other field is rejected. I am not joining a `/path` onto the bed yet. The lo
 4. Repeat that walk as tides without closing the browser. Done.
 5. Take a silt reading over the DevTools protocol after forcing a collection. Done.
 6. Fail the process when the readings show a climb that does not settle. Done. The rule is `wash` and `rise`, above.
-7. Write the HTML report into `settling/`.
+7. Write the HTML report into `settling/`. Done. The page is still plain.
 
-Joining a course path onto the bed is still open. The report is still unwritten.
+Joining a course path onto the bed is still open. I have not polished the sheet.

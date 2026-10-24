@@ -3,6 +3,7 @@ export type RunArgs = {
   tideCount?: number;
   wash?: number;
   rise?: number;
+  sheetPath?: string;
 };
 
 export class UsageFault extends Error {
@@ -12,9 +13,9 @@ export class UsageFault extends Error {
   }
 }
 
-const USAGE = "usage: silttrap run <sluice> [--tides N] [--wash N] [--rise R]";
+const USAGE = "usage: silttrap run <sluice> [--tides N] [--wash N] [--rise R] [--sheet PATH]";
 
-/** Read `silttrap run <sluice> [--tides N] [--wash N] [--rise R]` from argv, without the node binary. */
+/** Read `silttrap run <sluice> [--tides N] [--wash N] [--rise R] [--sheet PATH]` from argv, without the node binary. */
 export function parseArgs(argv: string[]): RunArgs {
   if (argv.length === 0) {
     throw new UsageFault(`missing command\n${USAGE}`);
@@ -27,6 +28,7 @@ export function parseArgs(argv: string[]): RunArgs {
   let tideCount: number | undefined;
   let wash: number | undefined;
   let rise: number | undefined;
+  let sheetPath: string | undefined;
   for (let i = 1; i < argv.length; i += 1) {
     const arg = argv[i] ?? "";
     if (arg === "--tides" || arg.startsWith("--tides=")) {
@@ -53,6 +55,14 @@ export function parseArgs(argv: string[]): RunArgs {
       rise = readRise(rise, raw);
       continue;
     }
+    if (arg === "--sheet" || arg.startsWith("--sheet=")) {
+      const raw = valueAfter(argv, arg, i, "--sheet", "a path");
+      if (arg === "--sheet") {
+        i += 1;
+      }
+      sheetPath = readSheet(sheetPath, raw);
+      continue;
+    }
     if (arg.startsWith("-")) {
       throw new UsageFault(`unknown option ${JSON.stringify(arg)}\n${USAGE}`);
     }
@@ -74,6 +84,9 @@ export function parseArgs(argv: string[]): RunArgs {
   }
   if (rise !== undefined) {
     args.rise = rise;
+  }
+  if (sheetPath !== undefined) {
+    args.sheetPath = sheetPath;
   }
   return args;
 }
@@ -123,6 +136,16 @@ function readWash(already: number | undefined, raw: string): number {
     );
   }
   return value;
+}
+
+function readSheet(already: string | undefined, raw: string): string {
+  if (already !== undefined) {
+    throw new UsageFault(`--sheet was given twice\n${USAGE}`);
+  }
+  if (raw === "" || raw.startsWith("-")) {
+    throw new UsageFault(`--sheet needs a path\n${USAGE}`);
+  }
+  return raw;
 }
 
 function readRise(already: number | undefined, raw: string): number {

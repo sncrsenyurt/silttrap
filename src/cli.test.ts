@@ -1,9 +1,10 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { silttrap } from "./cli.js";
+import { DEFAULT_SHEET_PATH } from "./sheet/write-sheet.js";
 import { type SiltReading } from "./silt/reading.js";
 import { isSettled } from "./silt/verdict.js";
 import { type Sluice } from "./sluice/shape.js";
@@ -31,7 +32,7 @@ describe("silttrap", () => {
     const lines = flatLines();
 
     const result = await silttrap(
-      ["run", filePath, "--tides", "2"],
+      ["run", filePath, "--tides", "2", "--sheet", path.join(dir, "sheet.html")],
       async (sluice, options) => {
         seen.push({ sluice, tideCount: options.tideCount });
         return lines;
@@ -63,7 +64,7 @@ describe("silttrap", () => {
     });
     let options: RunSluiceOptions | undefined;
     await silttrap(
-      ["run", filePath],
+      ["run", filePath, "--sheet", path.join(dir, "sheet.html")],
       async (_sluice, received) => {
         options = received;
         return flatLines();
@@ -73,10 +74,10 @@ describe("silttrap", () => {
     expect(options).toEqual({ tideCount: undefined });
   });
 
-  it("prints a verdict and keeps a climb from a flat metric", async () => {
+  it("prints a verdict and writes the sheet even when a metric is climbing", async () => {
     const filePath = put("desk.sluice.json", {
-      title: "note desk",
-      bed: "https://notes.example/desk",
+      title: `note <desk> & "q"`,
+      bed: "https://notes.example/desk?x=1&y=<z>",
       tideCount: 4,
       wash: 1,
       rise: 0.1,
@@ -89,9 +90,10 @@ describe("silttrap", () => {
       tide(reading(1000, 20, 2)),
       tide(reading(1000, 40, 2)),
     ];
+    const sheetPath = path.join(dir, "nested", "out.html");
 
     const result = await silttrap(
-      ["run", filePath],
+      ["run", filePath, "--sheet", sheetPath],
       async () => lines,
       (line) => logged.push(line),
     );
@@ -100,8 +102,15 @@ describe("silttrap", () => {
       "heap settled 1000 to 1000",
       "nodes climbing 10 to 40",
       "listeners settled 2 to 2",
+      `sheet ${sheetPath}`,
     ]);
     expect(isSettled(result.verdict)).toBe(false);
+    expect(result.sheetPath).toBe(sheetPath);
+    const html = readFileSync(sheetPath, "utf8");
+    expect(html).toContain("note &lt;desk&gt; &amp; &quot;q&quot;");
+    expect(html).toContain("nodes climbing 10 to 40");
+    expect(html).not.toContain("<desk>");
+    expect(html).not.toContain("<z>");
   });
 
   it("lets a flag override the sluice rise", async () => {
@@ -115,9 +124,13 @@ describe("silttrap", () => {
     });
     const lines: TideLine[] = [tide(reading(100, 100, 100)), tide(reading(110, 110, 110))];
 
-    const tight = await silttrap(["run", filePath], async () => lines, () => undefined);
+    const tight = await silttrap(
+      ["run", filePath, "--sheet", path.join(dir, "tight.html")],
+      async () => lines,
+      () => undefined,
+    );
     const loose = await silttrap(
-      ["run", filePath, "--rise", "0.5"],
+      ["run", filePath, "--rise", "0.5", "--sheet", path.join(dir, "loose.html")],
       async () => lines,
       () => undefined,
     );
@@ -125,6 +138,23 @@ describe("silttrap", () => {
     expect(tight.verdict.metrics[0]?.mark).toBe("climbing");
     expect(loose.verdict.metrics[0]?.mark).toBe("settled");
     expect(loose.verdict.rise).toBe(0.5);
+  });
+
+  it("writes settling/sheet.html when no path is given", async () => {
+    const filePath = put("desk.sluice.json", {
+      title: "note desk",
+      bed: "https://notes.example/desk",
+      tideCount: 4,
+      gates: [],
+    });
+    try {
+      const result = await silttrap(["run", filePath], async () => flatLines(), () => undefined);
+      expect(result.sheetPath).toBe(DEFAULT_SHEET_PATH);
+      expect(readFileSync(result.sheetPath, "utf8")).toContain("<h1>note desk</h1>");
+      expect(isSettled(result.verdict)).toBe(true);
+    } finally {
+      rmSync(path.dirname(DEFAULT_SHEET_PATH), { recursive: true, force: true });
+    }
   });
 
   it("lets a flag wash hide a short comparison", async () => {
@@ -139,7 +169,7 @@ describe("silttrap", () => {
     const lines: TideLine[] = [tide(reading(100, 100, 100)), tide(reading(500, 500, 500))];
 
     const result = await silttrap(
-      ["run", filePath, "--wash", "1"],
+      ["run", filePath, "--wash", "1", "--sheet", path.join(dir, "sheet.html")],
       async () => lines,
       () => undefined,
     );

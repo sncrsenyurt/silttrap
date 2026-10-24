@@ -24,6 +24,14 @@ describe("parseArgs", () => {
       wash: 0,
       rise: 0.25,
     });
+    expect(parseArgs(["run", "sluices/note-desk.sluice.json", "--sheet", "settling/desk.html"])).toEqual({
+      filePath: "sluices/note-desk.sluice.json",
+      sheetPath: "settling/desk.html",
+    });
+    expect(parseArgs(["run", "--sheet=out/sheet.html", "a.json"])).toEqual({
+      filePath: "a.json",
+      sheetPath: "out/sheet.html",
+    });
   });
 
   it("rejects a command that is not run", () => {
@@ -52,6 +60,13 @@ describe("parseArgs", () => {
     expectUsage(["run", "a.json", "--rise=-0.1"], '--rise must be a non-negative number, got "-0.1"');
     expectUsage(["run", "a.json", "--rise", "0.1", "--rise", "0.2"], "--rise was given twice");
   });
+
+  it("rejects a sheet path that is missing or repeated", () => {
+    expectUsage(["run", "a.json", "--sheet"], "--sheet needs a path");
+    expectUsage(["run", "a.json", "--sheet="], "--sheet needs a path");
+    expectUsage(["run", "a.json", "--sheet", "--rise", "0.1"], "--sheet needs a path");
+    expectUsage(["run", "a.json", "--sheet", "one.html", "--sheet", "two.html"], "--sheet was given twice");
+  });
 });
 
 function expectUsage(argv: string[], detail: string): void {
@@ -63,6 +78,6 @@ function expectUsage(argv: string[], detail: string): void {
   }
   expect(caught).toBeInstanceOf(UsageFault);
   expect((caught as UsageFault).message).toBe(
-    `${detail}\nusage: silttrap run <sluice> [--tides N] [--wash N] [--rise R]`,
+    `${detail}\nusage: silttrap run <sluice> [--tides N] [--wash N] [--rise R] [--sheet PATH]`,
   );
 }

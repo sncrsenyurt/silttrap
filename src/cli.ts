@@ -4,6 +4,8 @@ import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 import { parseArgs } from "./parse-args.js";
+import { renderSheet } from "./sheet/render-sheet.js";
+import { DEFAULT_SHEET_PATH, writeSheet } from "./sheet/write-sheet.js";
 import { formatVerdict, isSettled, judge, DEFAULT_RISE, DEFAULT_WASH, type RunVerdict } from "./silt/verdict.js";
 import { readSluice } from "./sluice/read-sluice.js";
 import { runSluice, type TideLine } from "./tide/run-sluice.js";
@@ -11,6 +13,7 @@ import { runSluice, type TideLine } from "./tide/run-sluice.js";
 export type SilttrapRun = {
   lines: TideLine[];
   verdict: RunVerdict;
+  sheetPath: string;
 };
 
 export async function silttrap(
@@ -28,7 +31,18 @@ export async function silttrap(
   for (const line of formatVerdict(verdict)) {
     write(line);
   }
-  return { lines, verdict };
+  const sheetPath = args.sheetPath ?? DEFAULT_SHEET_PATH;
+  writeSheet(
+    sheetPath,
+    renderSheet({
+      title: sluice.title,
+      bed: sluice.bed,
+      lines,
+      verdict,
+    }),
+  );
+  write(`sheet ${sheetPath}`);
+  return { lines, verdict, sheetPath };
 }
 
 function invokedDirectly(): boolean {
