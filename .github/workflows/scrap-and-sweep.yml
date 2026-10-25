@@ -1,0 +1,59 @@
+name: scrap and sweep
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  beds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run build
+
+      - name: swept pan settles, scrap pile climbs
+        run: |
+          node demo/serve-beds.mjs &
+          pid=$!
+          trap 'kill "$pid"' EXIT
+          ready=0
+          for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+            if curl -sf -o /dev/null http://127.0.0.1:4731/swept-pan.html; then
+              ready=1
+              break
+            fi
+            sleep 0.2
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "beds did not come up"
+            exit 1
+          fi
+          mkdir -p settling
+          node dist/cli.js run sluices/swept-pan.sluice.json --sheet settling/swept-pan.html
+          set +e
+          node dist/cli.js run sluices/scrap-pile.sluice.json --sheet settling/scrap-pile.html > settling/scrap-pile.log 2>&1
+          code=$?
+          set -e
+          cat settling/scrap-pile.log
+          if [ "$code" -eq 0 ]; then
+            echo "scrap pile settled, and it should climb"
+            exit 1
+          fi
+          grep -q "climbing" settling/scrap-pile.log
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: silt-sheets
+          path: settling/*.html
+          if-no-files-found: warn

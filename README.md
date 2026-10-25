@@ -1,51 +1,112 @@
 # silttrap
 
-Work in progress. I am writing a small TypeScript command line tool that opens one browser, replays the same short flow many times inside that single session, and exits with a failure if memory keeps rising.
+I wrote a small command line tool that opens one Chromium, replays one browser flow over and over in that same session, and exits with a failure if the memory numbers keep rising. It also writes a single HTML file you can open in a browser.
 
-I call the flow file a sluice. One replay of it is a tide. The numbers taken after a tide are a silt reading: JS heap used, DOM node count, and event listener count. Those come from the Chrome DevTools protocol, with a forced garbage collection before each reading, so leftover trash is not mistaken for a live leak. If the readings keep climbing, the run fails. The same run writes one self-contained HTML file, a sheet, with inline SVG charts and no extra assets.
+## words
 
-## what works today
+A **sluice** is the JSON file that describes the flow. The **bed** is the URL a tide starts at. A **gate** is one step in that flow. A **tide** is one full replay. A **silt reading** is the three numbers taken after a tide: JS heap used, DOM node count, and event listener count. I take them over the Chrome DevTools protocol after forcing garbage collection twice, so the reading is what is still retained.
 
-Loading a sluice. `readSluice` reads one JSON file from disk and returns a typed object, or throws `SluiceFault` with a specific reason when the file is missing, not JSON, or the wrong shape. The sample flow is `sluices/note-desk.sluice.json`.
+**Wash** is how many leading tides I ignore. The first one is warm-up. **Rise** is the fraction the last counted reading may sit above the first. Under that, the metric is **settled**. Over it, the metric is **climbing**. Fewer than two counted readings is **short**. I compare the two ends only. A spike in the middle does not count.
 
-Running tides. `silttrap run sluices/note-desk.sluice.json` loads that file and opens one headless Chromium, one context, and one page. A tide starts at `bed`, then walks `gates` in order. The next tide reuses that same page. The count is the sluice `tideCount`. `--tides N` overrides it. After the gates, I take a silt reading on that page and print one line: `tide 1 84ms heap 1835008 nodes 42 listeners 3`. The browser closes when the run finishes, and it also closes when a gate throws.
+The HTML file is a **sheet**.
 
-The reading comes from one Chrome DevTools session on that page. I call `HeapProfiler.collectGarbage` twice, so the numbers are what is still retained, then `Runtime.getHeapUsage` for JS heap used (`usedSize`) and `Memory.getDOMCounters` for the DOM node count (`nodes`) and the event listener count (`jsEventListeners`). This is Chromium only. I do not launch Firefox or WebKit, because those three numbers are Chrome protocol fields.
+## run
 
-After the tides I judge each metric and print a line: `heap settled 1000 to 1040`, `nodes climbing 40 to 80`, or `listeners short`. I ignore the first `wash` tides (default 1). `rise` (default 0.1) is the fraction the last counted reading may sit above the first. Over that, the metric is climbing. Fewer than two counted readings is short. A spike in the middle does not count; I only compare the ends. The process exits 1 unless every metric is settled. `--wash` and `--rise` override the same fields on the sluice.
+You need Node 20 or newer.
 
-Then I write a sheet. The default path is `settling/sheet.html`. `--sheet PATH` picks another file. The page is one HTML file: inline CSS, three small SVG line charts (heap, nodes, listeners, each on its own scale), the verdict with the from and to numbers, the sluice title, how many tides ran, and a table of the raw readings. No scripts, no fonts, no outside files. Text from the sluice is escaped. I still write the sheet when the verdict is climbing. The page is plain. I have not polished it.
+```
+npm install
+npx playwright install chromium
+npm run build
+```
 
-I am not joining a course path that starts with `/` onto the bed yet. Reaching one throws `TideFault`. The note desk sample has `/notes/draft`, and its bed is only an example URL, so that file does not finish a tide, does not print a reading, and does not write a sheet.
+A sluice looks like this:
 
-## sluice file
+```json
+{
+  "title": "swept pan",
+  "bed": "http://127.0.0.1:4731/swept-pan.html",
+  "tideCount": 6,
+  "wash": 1,
+  "rise": 0.25,
+  "gates": [
+    { "kind": "nudge", "mark": "button.again" },
+    { "kind": "hold", "ms": 30 }
+  ]
+}
+```
 
-A sluice is one JSON object.
+- `title` is a non-empty string.
+- `bed` is an `http` or `https` URL.
+- `tideCount` is an integer greater than zero. `--tides N` overrides it for one run.
+- `wash` is optional, an integer of zero or more. Default 1.
+- `rise` is optional, a number of zero or more. Default 0.1.
+- `gates` is an ordered list. It may be empty.
 
-- `title` is a non-empty string, a name for the flow.
-- `bed` is an `http` or `https` URL. A tide starts there.
-- `tideCount` is an integer greater than zero, how many times to replay.
-- `gates` is an ordered list of steps. An empty list is allowed.
-- `wash` is optional, an integer of zero or more. The first that many tides are left out of the verdict. Default 1.
-- `rise` is optional, a number of zero or more. Allowed growth as a fraction of the first counted reading. Default 0.1.
+Gate kinds:
 
-Each gate has a `kind`.
-
-- `course` opens a page. `path` is an `http` or `https` URL, or a path that starts with `/`.
-- `nudge` clicks whatever `mark` matches. `mark` is a non-empty string.
-- `pour` types `text` into whatever `mark` matches. `text` is a string and may be empty.
+- `course` opens `path`, an `http` or `https` URL, or a path that starts with `/`.
+- `nudge` clicks whatever `mark` matches.
+- `pour` types `text` into whatever `mark` matches. `text` may be empty.
 - `hold` waits `ms` milliseconds, a positive integer.
 
-Any other field is rejected. I am not joining a `/path` onto the bed yet. The loader only checks the shape.
+Any other field is rejected.
 
-## rough plan
+```
+node dist/cli.js run sluices/swept-pan.sluice.json
+```
 
-1. Scaffold. Done.
-2. Settle the sluice file shape and load one from disk. Done for reading and validation.
-3. Launch one Playwright browser and walk the sluice a single time. Done.
-4. Repeat that walk as tides without closing the browser. Done.
-5. Take a silt reading over the DevTools protocol after forcing a collection. Done.
-6. Fail the process when the readings show a climb that does not settle. Done. The rule is `wash` and `rise`, above.
-7. Write the HTML report into `settling/`. Done. The page is still plain.
+Each tide prints one line, then one line per metric. One run looked like this. The bytes will not match yours:
 
-Joining a course path onto the bed is still open. I have not polished the sheet.
+```
+tide 1 108ms heap 1357080 nodes 26 listeners 14
+heap settled 1357392 to 1357420
+nodes settled 26 to 26
+listeners settled 14 to 14
+sheet settling/sheet.html
+```
+
+The process exits 0 when every metric is settled. It exits 1 when any metric is climbing or short. `--wash` and `--rise` override the sluice. `--sheet PATH` chooses the HTML file. The default path is `settling/sheet.html`, and that folder is gitignored.
+
+A path that starts with `/` is not joined onto the bed. `sluices/note-desk.sluice.json` still has one, so that file does not finish a tide.
+
+## sheet
+
+The sheet is one HTML file. The CSS is inline. There are three small SVG line charts, one each for heap, nodes, and listeners, each on its own scale. Under each chart is the verdict for that metric, including the from and to numbers when I had two readings to compare. The page also shows the sluice title, the bed, how many tides ran, the wash and rise I used, and a table of the raw readings. Nothing is loaded from the network. Text that came from the sluice is escaped.
+
+I write the sheet even when the run is climbing. Open the file in a browser. A climbing caption is the metric that failed. The table is the same numbers the charts are drawn from.
+
+## demo
+
+`demo/scrap-pile.html` and `demo/swept-pan.html` are the same small page. A click builds a batch of detached nodes, with a listener on each node, and holds them in an array. The pile keeps every batch. The pan builds the same batches and then drops them, listeners included. Each tide loads the page again, so the pile remembers the visit count in `sessionStorage` and keeps that many batches in the new document. That is the leak the reading can see.
+
+The pages are served by a tiny Node server, with no dependencies, on port 4731:
+
+```
+npm run beds
+```
+
+In another shell:
+
+```
+node dist/cli.js run sluices/swept-pan.sluice.json --sheet settling/swept-pan.html
+node dist/cli.js run sluices/scrap-pile.sluice.json --sheet settling/scrap-pile.html
+```
+
+The pan should exit 0. The pile should exit 1, with nodes and listeners climbing. Both sluices use wash 1 and rise 0.25, so a little noise does not fail the pan, and a pile that more than doubles still fails.
+
+GitHub Actions runs those two commands on every push, and when I start the workflow by hand. The pile is expected to exit non-zero. The sheets are uploaded as artifacts.
+
+## limits
+
+This is Chromium only. The three numbers are Chrome DevTools fields. I do not launch Firefox or WebKit.
+
+Two forced collections are not a perfect floor. A quiet run can still move the heap by a little, and a small retained object can disappear next to the baseline heap. On the scrap pile the heap stays inside the rise while the node count and the listener count climb. That is why the verdict is per metric.
+
+I judge the last counted reading against the first one. I do not look at the shape in between.
+
+A tide always starts with a fresh load of the bed. If the page drops everything at the end of the click, the next tide will not show a leak.
+
+A `course` path that starts with `/` is not joined onto the bed yet. Reaching one throws.
+
+A short series is not a pass. I will not call it settled.
