@@ -1,0 +1,17 @@
+{
+  "title": "scrap pile",
+  "bed": "http://127.0.0.1:4731/scrap-pile.html",
+  "tideCount": 6,
+  "wash": 1,
+  "rise": 0.25,
+  "gates": [
+    {
+      "kind": "nudge",
+      "mark": "button.again"
+    },
+    {
+      "kind": "hold",
+      "ms": 30
+    }
+  ]
+}

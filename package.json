@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "beds": "node demo/serve-beds.mjs"
   },
   "engines": {
     "node": ">=20"
