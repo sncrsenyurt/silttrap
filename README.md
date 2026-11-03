@@ -2,6 +2,12 @@
 
 I wrote a small command line tool that opens one Chromium, replays one browser flow over and over in that same session, and exits with a failure if the memory numbers keep rising. It also writes a single HTML file you can open in a browser.
 
+This is a real run of the scrap pile sluice from the demo below. Nodes and listeners climb, so it exits 1. The second picture is the sheet it wrote.
+
+![silttrap run on the scrap pile](docs/terminal.png)
+
+![sheet for the scrap pile](docs/sheet.png)
+
 ## words
 
 A **sluice** is the JSON file that describes the flow. The **bed** is the URL a tide starts at. A **gate** is one step in that flow. A **tide** is one full replay. A **silt reading** is the three numbers taken after a tide: JS heap used, DOM node count, and event listener count. I take them over the Chrome DevTools protocol after forcing garbage collection twice, so the reading is what is still retained.
